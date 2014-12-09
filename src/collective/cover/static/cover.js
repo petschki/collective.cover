@@ -1,7 +1,7 @@
 
 (function ($) {
     $.fn.liveSortable = function (opts) {
-        this.live("mouseover", function() {
+        $("#content").on("mouseover", this.nodeName, function() {
             if (!$(this).data("init")) {
                 $(this).data("init", true).sortable(opts);
             }
@@ -121,21 +121,6 @@ $(document).ready(function() {
         },
         config: {
             onLoad: function() {
-              if(typeof initTinyMCE != 'undefined') {
-                  initTinyMCE(this.getOverlay());
-              }
-              $('textarea.mce_editable').each(function() {
-                  if(typeof TinyMCEConfig != 'undefined') {
-                      textarea_id = $(this).attr('id');
-                      var config = new TinyMCEConfig(textarea_id);
-                      delete InitializedTinyMCEInstances[textarea_id];
-                      config.init();
-
-                      // Remove unecessary link, use HTML button of editor
-                      $('div.suppressVisualEditor').remove();
-                  }
-              });
-
               //carousel
               var carousel = $('div[data-carousel="carousel-sort"]');
               if (carousel[0] !== undefined ){
