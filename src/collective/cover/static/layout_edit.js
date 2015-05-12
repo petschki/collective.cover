@@ -184,9 +184,9 @@
                                 var url_config = "@@configure-tile/" + tile_type + "/" + info;
 
                                 var config_icon = $("<i/>").addClass("config-icon");
-                                var config_link = $("<a />").addClass("config-tile-link pat-modal")
+                                var config_link = $("<a />").addClass("config-tile-link pat-plone-modal")
                                                             .attr('href',url_config)
-                                                            .attr('data-pat-modal', 'content: div.tiles-configuration')
+                                                            .attr('data-pat-plone-modal', 'content: div.tiles-configuration')
                                                             .append(config_icon);
                                 var name_tag = $("<span />").addClass("tile-name")
                                                             .text(ui.draggable.data('tile-name'));
