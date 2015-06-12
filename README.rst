@@ -75,6 +75,10 @@ Mostly Harmless
     :alt: Travis CI badge
     :target: http://travis-ci.org/collective/collective.cover
 
+.. image:: https://badge.waffle.io/collective/collective.cover.png?label=ready&title=Ready
+    :alt: Stories in Ready
+    :target: https://waffle.io/collective/collective.cover
+
 .. image:: https://coveralls.io/repos/collective/collective.cover/badge.png?branch=master
     :alt: Coveralls badge
     :target: https://coveralls.io/r/collective/collective.cover
@@ -135,10 +139,10 @@ To enable this package in a buildout-based installation:
 
     [versions]
     ...
+    collective.js.bootstrap = 2.3.1.1
     plone.app.blocks = 1.1.1
     plone.app.drafts = 1.0a2
     plone.app.tiles = 1.0.1
-    plone.formwidget.namedfile = 1.0.10
     plone.tiles = 1.2
 
 #. If you are using Plone 4.2.x you need to add the following also::
@@ -150,6 +154,11 @@ To enable this package in a buildout-based installation:
     plone.app.jquerytools = 1.5.7
     plone.app.z3cform = 0.6.3
     plone.directives.form = 1.1
+
+#. If you want to use a newer release of ``collective.js.bootstrap``, you will need to update ``plone.app.jquery``::
+
+    [versions]
+    plone.app.jquery = 1.8.3
 
 After updating the configuration you need to run ''bin/buildout'', which will
 take care of updating your system.

@@ -69,12 +69,12 @@
     cursor: pointer;
     height: 14px;
     width: 14px;
-    background:transparent url('remove.png') scroll no-repeat top center;
+    background:transparent url(++resource++collective.cover/remove.png) scroll no-repeat top center;
     background-size: 100%;
 }
 
 .tile-remove-item:hover {
-    background:transparent url("remove.png") no-repeat scroll center -14px;
+    background:transparent url(++resource++collective.cover/remove.png) no-repeat scroll center -14px;
     background-size: 100%;
 }
 .tile-remove-item .text{
@@ -148,4 +148,12 @@ table.invisible{visibility:visible;}
     -moz-box-shadow: 0 5px 10px #C3C3C3;
     -webkit-box-shadow: 0 5px 10px #C3C3C3;
     box-shadow: 0 5px 10px #C3C3C3;
+}
+
+.textline-sortable-element.expired {
+    border: 1px solid red;
+}
+.textline-sortable-element .tileProperties .tileExpired {
+  font-weight: bold;
+  color: red;
 }

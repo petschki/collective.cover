@@ -18,9 +18,9 @@ import json
 
 
 class PageLayout(grok.View):
-    """
-    Renders a layout for the cover object.
-    """
+
+    """Renders a layout for the cover object."""
+
     grok.context(ICover)
     grok.name('layout')
     grok.require('zope2.View')
@@ -49,9 +49,8 @@ class PageLayout(grok.View):
         return layout
 
     def grid_layout_common(self, layout):
-        """Add things to the grid/layout structure which should be available
-        on both compose and layout tabs.
-
+        """Add things to the grid/layout structure which should be
+        available on both compose and layout tabs.
         """
 
         for element in layout:
@@ -79,30 +78,33 @@ class PageLayout(grok.View):
                     self.grid_layout_edit(element['children'])
 
     def render_section(self, section, mode):
-        if 'type' in section:
-            if section['type'] == u'row':
-                return self.row(section=section, mode=mode)
-            if section['type'] == u'group':
-                return self.group(section=section, mode=mode)
-            if section['type'] == u'tile':
-                tile_path = '{0}/@@{1}/{2}'.format(
-                    '/'.join(self.context.getPhysicalPath()),
-                    section.get('tile-type'),
-                    section.get('id'))
-                tile = self.context.restrictedTraverse(tile_path.encode(), None)
-                if tile is None:
-                    return '<div class="tileNotFound">Could not find tile</div>'
-                tile_url = '{0}/@@{1}/{2}'.format(
-                    self.context.absolute_url(),
-                    section.get('tile-type'),
-                    section.get('id'))
-                tile_conf = tile.get_tile_configuration()
-                css_class = tile_conf.get('css_class', '')
-                section['class'] = '{0} {1}'.format(section.get('class'), css_class)
-
-                return self.tile(section=section, mode=mode, tile_url=tile_url)
-        else:
+        if 'type' not in section:
             return self.generalmarkup(section=section, mode=mode)
+
+        if section['type'] == u'row':
+            return self.row(section=section, mode=mode)
+        elif section['type'] == u'group':
+            return self.group(section=section, mode=mode)
+        elif section['type'] == u'tile':
+            tile_path = '{0}/@@{1}/{2}'.format(
+                '/'.join(self.context.getPhysicalPath()),
+                section.get('tile-type'),
+                section.get('id'))
+            tile = self.context.restrictedTraverse(tile_path.encode(), None)
+            if tile is None:
+                return '<div class="tileNotFound">Could not find tile</div>'
+            if mode == 'layout_edit':
+                css_class = 'cover-tile '
+            else:
+                css_class = 'tile '
+            tile_url = '{0}/@@{1}/{2}'.format(
+                self.context.absolute_url(),
+                section.get('tile-type'),
+                section.get('id'))
+            tile_conf = tile.get_tile_configuration()
+            css_class += tile_conf.get('css_class', '')
+            section['css_class'] = css_class.strip()
+            return self.tile(section=section, mode=mode, tile_url=tile_url)
 
     def is_user_allowed_in_group(self):
         return True
@@ -239,21 +241,25 @@ class GroupSelect(grok.View):
                 i += 1
 
 
-class Deco16Grid (grok.GlobalUtility):
-    grok.name('deco16_grid')
-    grok.implements(IGridSystem)
+class BaseGrid(object):
 
-    title = _(u'Deco (16 columns, default)')
-    ncolumns = 16
+    """Base class for grid systems."""
+
+    title = u''
+    ncolumns = 0
 
     row_class = 'row'
-    column_class = 'cell'
+    column_class = 'column'
 
     def transform(self, layout):
         for element in layout:
             if 'type' in element:
                 if element['type'] == 'row':
                     element['class'] = self.row_class
+                    if 'css-class' in element:
+                        element['class'] += ' {0}'.format(
+                            element['css-class']
+                        )
                     if 'children' in element:
                         self.transform(self.columns_formatter(element['children']))
                 if element['type'] == 'group' and 'children' in element:
@@ -263,13 +269,76 @@ class Deco16Grid (grok.GlobalUtility):
                     element['class'] = 'tile'
 
     def columns_formatter(self, columns):
-        # This formatter works for Deco; you can implement a custom one
-        # for you grid system
+        raise Exception('Must be implemented in the child')
+
+
+class Bootstrap3(BaseGrid, grok.GlobalUtility):
+
+    """Bootstrap 3 grid system (12 columns)."""
+
+    grok.name('bootstrap3')
+    grok.implements(IGridSystem)
+
+    ncolumns = 12
+    title = _(u'Bootstrap 3')
+
+    def columns_formatter(self, columns):
+        prefix = 'col-md-'
+        for column in columns:
+            width = column.get('column-size', 1)
+            column['class'] = self.column_class + ' ' + (prefix + str(width))
+            if 'css-class' in column:
+                column['class'] += ' {0}'.format(
+                    column['css-class']
+                )
+
+        return columns
+
+
+class Bootstrap2(BaseGrid, grok.GlobalUtility):
+
+    """Bootstrap 2 grid system (12 columns)."""
+
+    grok.name('bootstrap2')
+    grok.implements(IGridSystem)
+
+    ncolumns = 12
+    title = _(u'Bootstrap 2')
+
+    def columns_formatter(self, columns):
+        prefix = 'span'
+        for column in columns:
+            width = column.get('column-size', 1)
+            column['class'] = self.column_class + ' ' + (prefix + str(width))
+            if 'css-class' in column:
+                column['class'] += ' {0}'.format(
+                    column['css-class']
+                )
+
+        return columns
+
+
+class Deco16Grid (BaseGrid, grok.GlobalUtility):
+
+    """Deco grid system (16 columns)."""
+
+    grok.name('deco16_grid')
+    grok.implements(IGridSystem)
+
+    title = _(u'Deco (16 columns)')
+    ncolumns = 16
+    column_class = 'cell'
+
+    def columns_formatter(self, columns):
         w = 'width-'
         p = 'position-'
         offset = 0
         for column in columns:
-            width = column['data']['column-size'] if 'data' in column else 1
+            width = column.get('column-size', 1)
             column['class'] = self.column_class + ' ' + (w + str(width)) + ' ' + (p + str(offset))
+            if 'css-class' in column:
+                column['class'] += ' {0}'.format(
+                    column['css-class']
+                )
             offset = offset + width
         return columns

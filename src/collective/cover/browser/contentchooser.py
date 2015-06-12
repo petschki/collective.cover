@@ -4,13 +4,15 @@ from Acquisition import aq_inner
 from Acquisition import aq_parent
 from collective.cover.controlpanel import ICoverSettings
 from five import grok
+from plone import api
 from plone.app.layout.navigation.interfaces import INavigationRoot
 from plone.app.layout.navigation.root import getNavigationRoot
 from plone.i18n.normalizer.interfaces import IIDNormalizer
 from plone.registry.interfaces import IRegistry
-from Products.CMFCore.interfaces._content import IFolderish
-from plone import api
+from Products.CMFCore.interfaces import IFolderish
 from Products.CMFPlone.browser.navtree import SitemapNavtreeStrategy
+from Products.CMFPlone.PloneBatch import Batch
+from Products.CMFPlone.utils import safe_unicode
 from Products.Five.browser import BrowserView
 from zope.browserpage.viewpagetemplatefile import ViewPageTemplateFile
 from zope.component import getUtility
@@ -18,14 +20,15 @@ from zope.component import queryUtility
 from zope.interface import Interface
 from zope.schema.interfaces import IVocabularyFactory
 from zope.schema.vocabulary import SimpleTerm
-from Products.CMFPlone.PloneBatch import Batch
-from Products.CMFPlone.utils import safe_unicode
 
 import json
 
 VOCAB_ID = u'plone.app.vocabularies.ReallyUserFriendlyTypes'
 
 grok.templatedir('contentchooser_templates')
+
+
+ITEMS_BY_REQUEST = 20
 
 
 # XXX: what's the purpose of this view?
@@ -71,24 +74,24 @@ class ContentSearch(grok.View):
     def update(self):
         self.query = self.request.get('q', None)
         self.tab = self.request.get('tab', None)
-        b_size = int(self.request.get('b_size', 10))
-        page = int(self.request.get('page', 0))
+        page = int(self.request.get('page', 1))
         strategy = SitemapNavtreeStrategy(self.context)
 
         uids = None
-        result = self.search(self.query, uids=uids,
-                             page=page,
-                             b_size=b_size)
+        result = self.search(
+            self.query, uids=uids,
+            page=page
+        )
         self.has_next = result.next is not None
-        self.nextpage = result.pagenumber
-        result = [strategy.decoratorFactory({'item': node}) for node in result]
+        self.nextpage = result.pagenumber + 1
+        children = [strategy.decoratorFactory({'item': node}) for node in result]
         self.level = 1
-        self.children = result
+        self.children = children
 
     def render(self):
-        return self.list_template(children=self.children, level=1)
+        return self.list_template()
 
-    def search(self, query=None, page=0, b_size=10, uids=None):
+    def search(self, query=None, page=1, b_size=ITEMS_BY_REQUEST, uids=None):
         catalog = api.portal.get_tool('portal_catalog')
         registry = getUtility(IRegistry)
         settings = registry.forInterface(ICoverSettings)
@@ -97,17 +100,12 @@ class ContentSearch(grok.View):
         # temporary we'll only list published elements
         catalog_query = {'sort_on': 'effective', 'sort_order': 'descending'}
         catalog_query['portal_type'] = searchable_types
-
         if query:
-            catalog_query = {'SearchableText': u'{0}*'.format(safe_unicode(query))}
-
-        # XXX: not implemented, this is needed?
-        # if uids:
-        #     catalog_query['UID'] = uids
-
+            catalog_query['Title'] = u'{0}*'.format(safe_unicode(query))
         results = catalog(**catalog_query)
-        results = Batch(results, size=b_size, start=(page * b_size), orphan=0)
-
+        self.total_results = len(results)
+        start = (page - 1) * b_size
+        results = Batch(results, size=b_size, start=start, orphan=0)
         return results
 
     def getTermByBrain(self, brain, real_value=True):
@@ -175,7 +173,7 @@ class SearchItemsBrowserView(BrowserView):
                                    'url': root_url + '/' + '/'.join(now)})
         return result
 
-    def jsonByType(self, rooted, document_base_url, searchtext):
+    def jsonByType(self, rooted, document_base_url, searchtext, page='1'):
         """ Returns the actual listing """
         catalog_results = []
         results = {}
@@ -205,9 +203,18 @@ class SearchItemsBrowserView(BrowserView):
         catalog_query['portal_type'] = self.filter_portal_types
         catalog_query['path'] = {'query': path, 'depth': 1}
         if searchtext:
-            catalog_query = {'SearchableText': '{0}*'.format(searchtext)}
+            catalog_query['Title'] = '{0}*'.format(searchtext)
 
-        for brain in catalog(**catalog_query):
+        brains = catalog(**catalog_query)
+        page = int(page, 10)
+        start = (page - 1) * ITEMS_BY_REQUEST
+        brains = Batch(brains, size=ITEMS_BY_REQUEST, start=start, orphan=0)
+
+        results['has_next'] = brains.next is not None
+        results['nextpage'] = brains.pagenumber + 1
+        results['total_results'] = len(brains)
+
+        for brain in brains:
             catalog_results.append({
                 'id': brain.getId,
                 'uid': brain.UID or None,  # Maybe Missing.Value
@@ -217,8 +224,10 @@ class SearchItemsBrowserView(BrowserView):
                 'classicon': 'contenttype-{0}'.format(normalizer.normalize(brain.portal_type)),
                 'r_state': 'state-{0}'.format(normalizer.normalize(brain.review_state or '')),
                 'title': brain.Title == "" and brain.id or brain.Title,
-                'icon': self.getIcon(brain).html_tag() or '',
-                'is_folderish': brain.is_folderish})
+                'icon': self.getIcon(brain).url or '',
+                'is_folderish': brain.is_folderish,
+                'description': brain.Description or ''
+            })
         # add catalog_ressults
         results['items'] = catalog_results
         # return results in JSON format

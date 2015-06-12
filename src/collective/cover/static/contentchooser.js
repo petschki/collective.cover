@@ -1,199 +1,36 @@
-var ajaxSearchRequest = [];
-function contentSearchFilter(url) {
-  var queryVal = $("#contentchooser-content-search-input").val();
-  var page = 0;
-  var data = {'q': queryVal, 'page': page};
-  ajaxSearchRequest.push($.ajax({
-    url: url,
-    data: data,
-    success: function(info) {
-      $("#contentchooser-content-search #recent .item-list").html(info);
-      $("#contentchooser-content-search #recent .item-list li ul").css("display", "none");
-      return false;
-    }
-  }));
-  return false;
-}
-
-(function ($) {
-    $.fn.liveDraggable = function (opts) {
-        $(document).on("mouseover", this.selector, function() {
-            if (!$(this).data("init")) {
-                $(this).data("init", true).draggable(opts);
-            }
-        });
-        return $();
-    };
-}(jQuery));
-
-
-function contentchooserMaker(options) {
-    var windowId = options.windowId;
-    var droppable = options.droppable;
-    var draggable = options.draggable;
-    var draggable_acepted = options.draggable_acepted;
-    var dropped = options.dropped;
-
-    //items inside contentchooser should be draggable
-    $(draggable).liveDraggable({
-        scroll: false,
-        helper: "clone"
-    });
-
-    $(droppable).droppable({
-        activeClass: 'ui-state-default',
-        accept: draggable_acepted,
-        hoverClass: 'content-drop-hover ui-state-hover',
-        drop: dropped
-    });
-
-    // TODO: check if the current contentchooser requires any tabs
-    $(windowId + " ul.formTabs").tabs("div.panes > div");
-}
-
-$(function() {
-    // Live search content tree
-    coveractions.liveSearch('#contentchooser-content-trees','.item-list li','#filter-count');
-
-    $(document).on("click", ".item-list a.next", function(e){
-        $.ajax({
-            url: "@@content-search",
-            data: {'page': $(e.currentTarget).attr('data-page'),
-                   'q': $(e.currentTarget).attr('data-query')},
-            async: false
-        }).done(function(data) {
-            $('.item-list a.next').replaceWith(data);
-        });
-        return false;
-    });
-
-    $(document).on("click", "#recent .contentchooser-clear", function(e){
-        $(e.currentTarget).prev().children("input").val("");
-        ajaxSearchRequest.push($.ajax({
-            url: portal_url + "/@@content-search",
-            success: function(info) {
-              $("#contentchooser-content-search #recent .item-list").html(info);
-              $("#contentchooser-content-search #recent .item-list li ul").css("display", "none");
-              return false;
-            }
-        }));
-        return false;
-    });
-
-    $(document).on("click", "#content-trees .contentchooser-clear", function(e){
-        $(e.currentTarget).prev().children("input").val("");
-        coveractions.getFolderContents(portal_url, '@@jsonbytype');
-        return false;
-    });
-
-    if($("#contentchooser-content-search").length) {
-        var content_name = $("#contentchooser-content-search-compose-button").text();
-        $("#content").prepend("<div class='btn' id='contentchooser-content-show-button'>"+content_name+"</div>");
-
-        $( "#contentchooser-content-search" ).resizable({
-            maxHeight:411,
-            minHeight: 411,
-            minWidth: 350,
-            maxWidth: 540
-        });
-
-    }
-
-    $("#contentchooser-content-search-button").click(function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var dataUrl = $(this).attr("data-url");
-        contentSearchFilter(dataUrl);
-        return false;
-    });
-
-    contentchooserMaker({
-        draggable: '#contentchooser-content-search .item-list li',
-        draggable_acepted: function(e) {
-            var ct = $(this).data('tileValidCt');
-            var valid = $.inArray($(e).find('a').data('ctType'), ct);
-            var isDroppable = $(this).attr("data-is-droppable");
-
-            if(isDroppable === "False" || $(e).attr('id') === 'contentchooser-content-search') {
-                return false;
-            }
-            if(!ct && $($(e).context).parent().attr("class") === "item-list") {
-                return true;
-            }
-            return valid !== -1? true : false;
-        },
-        windowId: '#contentchooser-content-search',
-        droppable: '#content .tile',
-        dropped: function(event, ui) {
-            var tile = $(this);
-            var tile_type = tile.attr("data-tile-type");
-            var tile_id = tile.attr("id");
-            var ct_uid = ui.draggable.attr("uid");
-            tile.find('.loading-mask').addClass('show');
-            $.ajax({
-                url: "@@updatetilecontent",
-                data: {'tile-type': tile_type, 'tile-id': tile_id, 'uid': ct_uid},
-                success: function(info) {
-                    tile.html(info);
-                    tile.find('.loading-mask').removeClass('show');
-                    TitleMarkupSetup();
-                    return false;
-                }
-            });
-        }
-    });
-
-
-
-    $( "#contentchooser-content-search" ).draggable({
-        start: function(event, ui) {
-            $(this).removeClass("right");
-        },
-        cancel: '.item-list, #contentchooser-content-search-input, #contentchooser-content-trees'
-    });
-  $("#contentchooser-content-show-button").click(function() {
-    var offset = $(this).offset();
-    $("#contentchooser-content-search").css("display", "block");
-    $("#contentchooser-content-search").offset({'top':offset.top});
-  });
-
-  $("#contentchooser-content-search .close").click(function(e) {
-    e.preventDefault();
-    $("#contentchooser-content-search").css("display", "none");
-  });
-  $(document).on("click", "#contentchooser-content-search #content-tree .item-list li", function(e) {
-    e.stopPropagation();
-    var child = $(this).children("ul");
-    if (child.is(":visible")) {
-      child.css("display", "none");
-    } else {
-      child.css("display", "block");
-    }
-  });
-
-});
-
+var TIMEOUT = 500;
 
 var coveractions = {
     /**
      * Context URL to be used for all AJAX call
      */
     /*
-    var call_context = $("head base").attr('href');
-    if (call_context.charAt(call_context.length - 1) !== '/') {
-        call_context = call_context + '/';
-    }
+      var call_context = $("head base").attr('href');
+      if (call_context.charAt(call_context.length - 1) !== '/') {
+      call_context = call_context + '/';
+      }
     */
     call_context : portal_url + '/',
     current_path : document.location.href,
 
     preInit : function() {
         // If compose exists in url
-        if (this.current_path.indexOf('/compose') > 0){
+        if (this.current_path.indexOf('/compose') > 0) {
             this.getFolderContents(this.call_context,'@@jsonbytype');
+        }
+    },
 
+    handle_scroll: function() {
+        var $ul = $(this);
+        var last_path = $ul.attr('data-last-path');
+        var has_next = $ul.attr('data-has-next');
+
+        if ((has_next === 'false') ||
+            ($ul.scrollTop() + $ul.innerHeight() < $ul[0].scrollHeight)) {
+            return;
         }
 
+        coveractions.getFolderContents(last_path, '@@jsonbytype', true);
     },
 
     send: function(o) {
@@ -264,22 +101,54 @@ var coveractions = {
     },
 
 
-    getFolderContents : function(path, method) {
+    getFolderContents : function(path, method, scroll) {
+        if (scroll === null) {
+            scroll = false;
+        }
         // Sends a low level Ajax request
         var t = this, d = document, w = window, na = navigator, ua = na.userAgent;
-        $('#contentchooser-content-trees').val('');
+        var $ul = $('#content-trees .item-list');
+        var last_path = $ul.attr('data-last-path');
+        $ul.attr('data-last-path', path);
+        var has_next = $ul.attr('data-has-next');
+        var nextpage = parseInt($ul.attr('data-nextpage'), 10);
+
+        if (path !== last_path) {
+            $('input:text[id=contentchooser-content-trees][name=contentchooser-content-trees]').val('');
+        }
+        if (path === undefined) {
+            path = coveractions.call_context;
+        }
+
+        var data = "searchtext=" +
+                ($('input:text[id=contentchooser-content-trees][name=contentchooser-content-trees]').val() || '') +
+                "&rooted='False'" + "&document_base_url=" + encodeURIComponent(d.baseURI);
+
+        if ((has_next !== null) && has_next === 'true' && scroll === true) {
+            data = "page="+ nextpage +"&" + data;
+        }
+
+        $('#ajax-spinner').show();
 
         coveractions.send({
             url : path + '/' + method,
             content_type : "application/x-www-form-urlencoded",
             type : 'POST',
-            data : "searchtext=" +
-            (jQuery('input:text[id=contentchooser-content-trees][name=contentchooser-content-trees]').val() || '') +
-             "&rooted='False'" + "&document_base_url=" +
-            encodeURIComponent(d.baseURI),
+            data : data,
             success : function(text) {
+                $('#ajax-spinner').hide();
                 var html = "";
-                var data = jQuery.parseJSON(text);
+                var data = $.parseJSON(text);
+
+                var filter = $('input:text[id=contentchooser-content-trees][name=contentchooser-content-trees]').val();
+                if (filter !== '') {
+                    $('#content-trees .filter-count').text(" "+ data.total_results + " Results");
+                } else {
+                    $('#content-trees .filter-count').text("");
+                }
+
+                $ul.attr('data-has-next', data.has_next);
+                $ul.attr('data-nextpage', data.nextpage);
 
                 if (data.items.length > 0) {
                     for (var i = 0; i < data.items.length; i++) {
@@ -288,11 +157,12 @@ var coveractions = {
 
                         if (data.items[i].is_folderish) {
                             if (data.items[i].icon.length) {
-                                html += '<img src="' + data.items[i].getIcon + '" border="0" style="margin-left: 17px" /> ';
+                                html += '<img src="' + data.items[i].icon + '" /> ';
                             }
                             html += '<a data-ct-type="' +
                                 data.items[i].portal_type  +'" class="' +
                                 data.items[i].classicon + ' ' + data.items[i].r_state + '" ';
+                            html += 'title="' + data.items[i].description + '" ';
                             html += 'href="javascript:coveractions.getFolderContents(\'' + data.items[i].url + '\',\'@@jsonbytype' + '\')">';
                             html += '<span>' + data.items[i].title + '</span>';
                             html += '</a>';
@@ -303,7 +173,8 @@ var coveractions = {
                             html += '<a data-ct-type="' +
                                 data.items[i].portal_type  +'" class="' +
                                 data.items[i].classicon + ' ' +
-                                data.items[i].r_state + '"> ';
+                                data.items[i].r_state + '" ' +
+                                'title="' + data.items[i].description + '"> ';
                             html += '<span>' + data.items[i].title + '</span>';
                             html += '</a>';
                         }
@@ -313,8 +184,12 @@ var coveractions = {
                     html = '';
                 }
 
-                jQuery(function(){
-                    jQuery("#content-trees > .item-list")[0].innerHTML = html;
+                $(function(){
+                    if (data.nextpage === 2) {
+                        $("#content-trees > .item-list")[0].innerHTML = html;
+                    } else {
+                        $("#content-trees > .item-list")[0].innerHTML += html;
+                    }
 
                     html = "";
                     for (var i = 0; i < data.path.length; i++) {
@@ -330,7 +205,7 @@ var coveractions = {
                         }
                     }
 
-                    jQuery('#content-trees #internalpath')[0].innerHTML = html;
+                    $('#content-trees #internalpath')[0].innerHTML = html;
                 });
 
             }
@@ -340,58 +215,259 @@ var coveractions = {
 
     getCurrentFolderContents : function() {
         this.getFolderContents(this.current_path, '@@jsonbytype');
-    },
-
-    liveSearch : function(selector,selectorlist,selectoroutput){
-        // selector: Is an input text
-        // selectorlist: Is an selector  type li tag
-        // selectoroutput: Displays number of items that meet the search criteria
-        // Eg. coveractions.liveSearch('#contentchooser-content-trees','.item-list li','#filter-count');
-        jQuery(selector).keyup(function(){
-            // Retrieve the input field text and reset the count to zero
-            var filter = $(this).val(), count = 0;
-
-            // Loop through the items list
-            jQuery(selectorlist).each(function(){
-                // If the list item does not contain the text phrase fade it out
-                if (jQuery(this).text().search(new RegExp(filter, "i")) < 0) {
-                    jQuery(this).fadeOut();
-                // Show the list item if the phrase matches and increase the count by 1
-                } else {
-                    jQuery(this).show();
-                    count++;
-                }
-
-            });
-
-            // Update the count
-            if (filter !== ''){
-                var numberItems = count;
-                jQuery(selectoroutput).text(" "+ count + " Results");
-            } else {
-                jQuery(selectoroutput).text("");
-            }
-        });
-    },
-
-
+    }
 };
 
-coveractions.preInit();
 
-
-function filterOnKeyUp() {
-    $("#contentchooser-content-search-button").css("display", "none");
-    $(".contentchooser-content-trees").keyup(function() {
-        var i = 0;
-        for(i=0; i<ajaxSearchRequest.length; i++) {
-            ajaxSearchRequest[i].abort();
+(function ($) {
+    var ajaxSearchRequest = [];
+    var timeoutIDs = [];
+    var handle_scroll = function() {
+        var $ul = $(this);
+        var total_li = parseInt($ul.attr('data-total-results'), 10);
+        if (($ul.attr('data-has-next') === 'False') ||
+            ($ul.scrollTop() + $ul.innerHeight() < $ul[0].scrollHeight) ||
+            ($('li', $ul).length >= total_li)) {
+            return;
         }
-        ajaxSearchRequest = [];
-        $("#contentchooser-content-search-button").trigger("click");
-    });
-}
+        var url = $("#contentchooser-content-search-button").attr("data-url");
+        var queryVal = $("#contentchooser-content-search-input").val();
+        var nextpage = parseInt($ul.attr('data-nextpage'), 10);
+        var data = {'q': queryVal, 'page': nextpage};
+        $('#ajax-spinner').show();
+        ajaxSearchRequest.push($.ajax({
+            url: url,
+            data: data,
+            success: function(data) {
+                $('#ajax-spinner').hide();
+                var ul = $(data)[1];
+                $ul.attr('data-has-next', $(ul).attr('data-has-next'));
+                $ul.attr('data-nextpage', $(ul).attr('data-nextpage'));
+                $ul.append(ul.children);
+                return false;
+            }
+        }));
+    };
+    function contentSearchFilter(page) {
+        if (page === null) {
+            page = 1;
+        }
+        var url = $("#contentchooser-content-search-button").attr("data-url");
+        var queryVal = $("#contentchooser-content-search-input").val();
+        if ((queryVal.length > 0) &&
+            (queryVal.length < 3)) {
+            return false;
+        }
+        var i, len, tid;
+        for (i = 0, len = timeoutIDs.length; i < len; i++) {
+            tid = timeoutIDs[i];
+            clearTimeout(tid);
+        }
+        timeoutIDs = [];
+        $('#ajax-spinner').hide();
+        var timeoutID = setTimeout(function() {
+            var data = {'q': queryVal, 'page': page};
+            $('#ajax-spinner').show();
+            ajaxSearchRequest.push($.ajax({
+                url: url,
+                data: data,
+                success: function(info) {
+                    $('#ajax-spinner').hide();
+                    $("#contentchooser-content-search #recent .item-list").off("scroll");
+                    $("#contentchooser-content-search #recent .item-list").replaceWith(info);
+                    $("#contentchooser-content-search #recent .item-list").on("scroll", handle_scroll);
+                    if (queryVal === '') {
+                        $('#recent .filter-count').text("");
+                    } else {
+                        var $ul = $("#contentchooser-content-search #recent .item-list");
+                        var count = $ul.attr('data-total-results');
+                        $('#recent .filter-count').text(" "+ count + " Results");
+                    }
+                    return false;
+                }
+            }));
+        }, TIMEOUT);
+        timeoutIDs.push(timeoutID);
+        return false;
+    }
 
-$(document).ready(function() {
-  filterOnKeyUp();
-});
+    $.fn.liveDraggable = function (opts) {
+        $(document).on("mouseover", this.selector, function() {
+            if (!$(this).data("init")) {
+                $(this).data("init", true).draggable(opts);
+            }
+        });
+        return $();
+    };
+
+    function contentchooserMaker(options) {
+        var windowId = options.windowId;
+        var droppable = options.droppable;
+        var draggable = options.draggable;
+        var draggable_acepted = options.draggable_acepted;
+        var dropped = options.dropped;
+
+        //items inside contentchooser should be draggable
+        $(draggable).liveDraggable({
+            scroll: false,
+            helper: "clone"
+        });
+
+        $(droppable).droppable({
+            activeClass: 'ui-state-default',
+            accept: draggable_acepted,
+            hoverClass: 'content-drop-hover ui-state-hover',
+            drop: dropped
+        });
+
+        // TODO: check if the current contentchooser requires any tabs
+        $(windowId + " ul.formTabs").tabs("div.panes > div");
+    }
+
+    $(function() {
+        $("#contentchooser-content-search #recent .item-list").on("scroll", handle_scroll);
+
+        $(document).on("click", "#recent .contentchooser-clear", function(e){
+            $(e.currentTarget).prev().children("input").val("");
+            ajaxSearchRequest.push($.ajax({
+                url: portal_url + "/@@content-search",
+                success: function(info) {
+                    $("#contentchooser-content-search #recent .item-list").html(info);
+                    $('#recent .filter-count').text("");
+                    return false;
+                }
+            }));
+            return false;
+        });
+
+        $(document).on("click", "#content-trees .contentchooser-clear", function(e){
+            $(e.currentTarget).prev().children("input").val("");
+            coveractions.getFolderContents(portal_url, '@@jsonbytype');
+            return false;
+        });
+
+        if($("#contentchooser-content-search").length) {
+            var content_name = $("#contentchooser-content-search-compose-button").text();
+            $("#content").prepend("<div class='btn' id='contentchooser-content-show-button'>"+content_name+"</div>");
+
+            $( "#contentchooser-content-search" ).resizable({
+                maxHeight:411,
+                minHeight: 411,
+                minWidth: 350,
+                maxWidth: 540
+            });
+
+        }
+
+        $("#contentchooser-content-search-button").click(function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            contentSearchFilter();
+            return false;
+        });
+
+        contentchooserMaker({
+            draggable: '#contentchooser-content-search .item-list li',
+            draggable_acepted: function(e) {
+                var ct = $(this).data('tileValidCt');
+                var valid = $.inArray($(e).find('a').data('ctType'), ct);
+                var isDroppable = $(this).attr("data-is-droppable");
+
+                if(isDroppable === "False" || $(e).attr('id') === 'contentchooser-content-search') {
+                    return false;
+                }
+                if(!ct && $($(e).context).parent().attr("class") === "item-list") {
+                    return true;
+                }
+                return valid !== -1? true : false;
+            },
+            windowId: '#contentchooser-content-search',
+            droppable: '#content .tile',
+            dropped: function(event, ui) {
+                var tile = $(this);
+                var tile_type = tile.attr("data-tile-type");
+                var tile_id = tile.attr("id");
+                var ct_uid = ui.draggable.attr("uid");
+                tile.find('.loading-mask').addClass('show');
+                $.ajax({
+                    url: "@@updatetilecontent",
+                    data: {'tile-type': tile_type, 'tile-id': tile_id, 'uid': ct_uid},
+                    success: function(info) {
+                        tile.html(info);
+                        tile.find('.loading-mask').removeClass('show');
+                        TitleMarkupSetup();
+                        return false;
+                    }
+                });
+            }
+        });
+
+
+
+        $( "#contentchooser-content-search" ).draggable({
+            start: function(event, ui) {
+                $(this).removeClass("right");
+            },
+            cancel: '.item-list, #contentchooser-content-search-input, #contentchooser-content-trees'
+        });
+        $("#contentchooser-content-show-button").click(function() {
+            var offset = $(this).offset();
+            $("#contentchooser-content-search").css("display", "block");
+            $("#contentchooser-content-search").offset({'top':offset.top});
+        });
+
+        $("#contentchooser-content-search .close").click(function(e) {
+            e.preventDefault();
+            $("#contentchooser-content-search").css("display", "none");
+        });
+        $(document).on("click", "#contentchooser-content-search #content-tree .item-list li", function(e) {
+            e.stopPropagation();
+            var child = $(this).children("ul");
+            if (child.is(":visible")) {
+                child.css("display", "none");
+            } else {
+                child.css("display", "block");
+            }
+        });
+
+    });
+
+
+    coveractions.preInit();
+
+    function filterOnKeyUp() {
+        var timeoutIDs = [];
+        $("#contentchooser-content-search-button").css("display", "none");
+        $("#contentchooser-content-trees").keyup(function() {
+            var queryVal = $(this).val();
+            if ((queryVal.length > 0) &&
+                (queryVal.length < 3)) {
+                return false;
+            }
+
+            var i, len, tid;
+            for (i = 0, len = timeoutIDs.length; i < len; i++) {
+                tid = timeoutIDs[i];
+                clearTimeout(tid);
+            }
+            timeoutIDs = [];
+            $('#ajax-spinner').hide();
+            var timeoutID = setTimeout(function() {
+                var $ul = $('#content-trees .item-list');
+                var last_path = $ul.attr('data-last-path');
+                coveractions.getFolderContents(last_path, '@@jsonbytype');
+            }, TIMEOUT);
+            timeoutIDs.push(timeoutID);
+        });
+        $("#contentchooser-content-search-input").keyup(function() {
+            $("#contentchooser-content-search-button").trigger("click");
+        });
+    }
+
+    $(document).ready(function() {
+        $("#contentchooser-content-search #content-trees .item-list").on(
+            "scroll", coveractions.handle_scroll
+        );
+        filterOnKeyUp();
+    });
+}(jQuery));

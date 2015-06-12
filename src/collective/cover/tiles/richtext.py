@@ -37,10 +37,8 @@ class RichTextTile(PersistentCoverTile):
             # We expect that the text has a mimeType and an output
             # attribute, but someone may be using a different widget
             # returning a simple unicode, so check that.
-            if not isinstance(text, basestring):
-                transformer = ITransformer(self.context, None)
-                if transformer is not None:
-                    text = transformer(text, 'text/x-html-safe')
+            if hasattr(text, 'output_relative_to'):
+                text = text.output_relative_to(self.context)
         return text
 
     def populate_with_object(self, obj):

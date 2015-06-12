@@ -10,6 +10,45 @@ There's a frood who really knows where his towel is.
   [petschki]
 
 - Allow new empty carousel tiles to be edited in compose mode. (fixes `#472`_).
+- Emit the layout identifier in the body class (closes `#216`_).
+  [hvelarde]
+
+- Add custom classes for row and columns (closes `#504`_).
+  [rodfersou, djowett]
+
+- Fix the carousel compose edit widget when items have been added that are now expired.
+  List the items with a red border and a warning text.
+  This only fixes listing expired content for non-managers (like using having the Editor rol) in compose mode, it doesn't change visibility of items when viewing.
+  [fredvd]
+
+- Do not purge fields in registry.xml to avoid overwriting information at reinstall time (fixes `#465`_).
+  [hvelarde]
+
+- Add upgrade step to remove orphan annotations left behind.
+  The bug was fixed in release 1.0a10 but no upgrade step was provided to clean up the objects.
+  [ericof, hvelarde]
+
+- Ship with support for more than one grid system.
+  Besides 16-column Deco grid, we now include support for 12-column Bootstrap 2 and Bootstrap 3 grids.
+  Check developers documentation for more information on how to use them (closes `#504`_).
+  [rodfersou]
+
+- Fix performance issues in the content chooser.
+  Searches only start after the third character and will be delayed by 500ms to wait for the user to stop typing.
+  Avoid including types not defined as "searchable" in the configlet.
+  The scope of the search was also changed: instead of searching on SearchableText index (full text), we search on Title index only (fixes `#493`_ and `#494`_).
+  [rodfersou]
+
+- Fix the indexing of RichText tiles by manually transform the text/html to text/plain.
+  [puittenbroek]
+
+- Don't ignore dropped objects on carousel tiles if the image is added to the object using a Dexterity behavior (fixes `#473`_).
+  [fredvd]
+
+- Fix to check if custom attributes were changed from default value (closes `#476`_).
+  [rodfersou]
+
+- Allow new empty carousel tiles to be edited in compose mode (fixes `#472`_).
   [fredvd]
 
 - Add warning in the developer docs that switching the default grid system also means you should pay extra attention to the preset/saved cover layouts as these can contain invalid grid sizes.
@@ -27,6 +66,9 @@ There's a frood who really knows where his towel is.
 
 - Allow to choose a custom title and description on items in a carousel tile (closes `#459`_).
   [rodfersou]
+
+- Stop collective.cover breaking Products.TinyMCE's hyperlink upload button (closes `#450`_).
+  [djowett]
 
 1.0a10 (2014-10-31)
 ^^^^^^^^^^^^^^^^^^^
@@ -556,6 +598,7 @@ There's a frood who really knows where his towel is.
 .. _`#204`: https://github.com/collective/collective.cover/issues/204
 .. _`#206`: https://github.com/collective/collective.cover/issues/206
 .. _`#212`: https://github.com/collective/collective.cover/issues/212
+.. _`#216`: https://github.com/collective/collective.cover/issues/216
 .. _`#218`: https://github.com/collective/collective.cover/issues/218
 .. _`#239`: https://github.com/collective/collective.cover/issues/239
 .. _`#241`: https://github.com/collective/collective.cover/issues/241
@@ -598,13 +641,19 @@ There's a frood who really knows where his towel is.
 .. _`#421`: https://github.com/collective/collective.cover/issues/421
 .. _`#423`: https://github.com/collective/collective.cover/issues/423
 .. _`#426`: https://github.com/collective/collective.cover/issues/426
-<<<<<<< HEAD
 .. _`#430`: https://github.com/collective/collective.cover/issues/430
-=======
 .. _`#438`: https://github.com/collective/collective.cover/issues/438
->>>>>>> master
 .. _`#449`: https://github.com/collective/collective.cover/issues/449
+.. _`#450`: https://github.com/collective/collective.cover/issues/450
 .. _`#459`: https://github.com/collective/collective.cover/issues/459
 .. _`#463`: https://github.com/collective/collective.cover/issues/463
+.. _`#465`: https://github.com/collective/collective.cover/issues/465
 .. _`#466`: https://github.com/collective/collective.cover/issues/466
+.. _`#472`: https://github.com/collective/collective.cover/issues/472
+.. _`#473`: https://github.com/collective/collective.cover/issues/473
+.. _`#476`: https://github.com/collective/collective.cover/issues/476
+.. _`#493`: https://github.com/collective/collective.cover/issues/493
+.. _`#494`: https://github.com/collective/collective.cover/issues/494
+.. _`#495`: https://github.com/collective/collective.cover/issues/495
+.. _`#504`: https://github.com/collective/collective.cover/issues/504
 .. _`PloneFormGen`: https://pypi.python.org/pypi/Products.PloneFormGen

@@ -5,6 +5,7 @@ from collective.cover.controlpanel import ICoverSettings
 from collective.cover.interfaces import ICover
 from collective.cover.interfaces import IGridSystem
 from collective.cover.tiles.list import ListTile
+from collective.cover.vocabularies import TileStylesVocabulary
 from five import grok
 from plone import api
 from plone.dexterity.events import EditBegunEvent
@@ -12,7 +13,7 @@ from plone.dexterity.utils import createContentInContainer
 from plone.registry.interfaces import IRegistry
 from plone.tiles.interfaces import ITileDataManager
 from plone.uuid.interfaces import IUUIDGenerator
-from Products.CMFCore.exceptions import BadRequest
+from zExceptions import BadRequest
 from zope.annotation.interfaces import IAnnotations
 from zope.component import getUtility
 from zope.event import notify
@@ -151,6 +152,8 @@ class LayoutEdit(grok.View):
 
     def update(self):
         self.context = aq_inner(self.context)
+        vocab = TileStylesVocabulary()
+        self.css_classes = vocab(self.context)
         # XXX: used to lock the object when someone is editing it
         notify(EditBegunEvent(self.context))
 
