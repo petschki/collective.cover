@@ -89,18 +89,6 @@
                 self.delete_manager();
                 self.resize_columns_manager();
                 self.class_chooser_manager();
-
-                //export layout
-                $('#btn-export').click(function(){
-                    if (!$(this).hasClass('disabled') && $('#btn-save').hasClass('saved') ) {
-                        $('#export-layout').modal();
-                    }
-                });
-
-                $('#btn-cancel-export-layout').click(function(e){
-                    e.preventDefault();
-                    $('#export-layout').modal('hide');
-                });
             },
 
             /**
