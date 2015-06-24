@@ -155,16 +155,17 @@ def searchableText(obj):
         tile = obj.restrictedTraverse(
             '@@collective.cover.richtext/{0}'.format(str(t)))
         value = tile.data['text']
-        data = transforms.convertTo(
-            'text/plain',
-            value.raw_encoded,
-            mimetype='text/html',
-            context=obj,
-            # portal_transforms caches on this
-            object=value._raw_holder,
-            encoding=value.encoding)
-        if data:
-            tiles_text += data.getData()
+        if value:
+            data = transforms.convertTo(
+                'text/plain',
+                value.raw_encoded,
+                mimetype='text/html',
+                context=obj,
+                # portal_transforms caches on this
+                object=value._raw_holder,
+                encoding=value.encoding)
+            if data:
+                tiles_text += data.getData()
 
     searchable_text = [safe_unicode(entry) for entry in (
         obj.id,
