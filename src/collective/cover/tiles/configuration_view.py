@@ -2,6 +2,7 @@
 
 from collective.cover import _
 from collective.cover.tiles.configuration import ITilesConfigurationScreen
+from datetime import datetime
 from plone import api
 from plone.app.tiles.browser.base import TileForm
 from plone.app.tiles.browser.traversal import TileTraverser
@@ -199,6 +200,15 @@ class DefaultConfigureForm(TileForm, form.Form):
         self.actions['save'].addClass('context')
         self.actions['cancel'].addClass('standalone')
 
+    def datetime_widget_options(self):
+        """Return the options that can be used on a datetime widget."""
+        now = datetime.now()
+        return (
+            ('datetime', api.portal.get_localized_time(now, long_format=True, time_only=False)),
+            ('dateonly', api.portal.get_localized_time(now, long_format=False, time_only=False)),
+            ('timeonly', api.portal.get_localized_time(now, long_format=False, time_only=True)),
+        )
+
 
 class DefaultConfigureView(layout.FormWrapper):
     """
@@ -229,3 +239,11 @@ class DefaultConfigureView(layout.FormWrapper):
         if self.form_instance is not None:
             if getattr(self.form_instance, 'tileType', None) is None:
                 self.form_instance.tileType = tileType
+
+    def __call__(self):
+        # We add Cache-Control here because IE9-11 cache XHR GET requests. If
+        # you configure a tile, save and reconfigure you get the previouw
+        # request. IE will list the request as 304 not modified, in its F12
+        # tools, but it is never even requested from the server.
+        self.request.response.setHeader('Cache-Control', 'no-cache, must-revalidate')
+        return super(DefaultConfigureView, self).__call__()
