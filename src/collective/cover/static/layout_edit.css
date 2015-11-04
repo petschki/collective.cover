@@ -222,7 +222,8 @@ input[type="submit"].btn::-moz-focus-inner {
     list-style-type: none;
     margin-left: 0;
 }
-#sidebar li {
+#sidebar li,
+#content #sidebar li {
     display:inline;
 }
 
