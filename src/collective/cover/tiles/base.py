@@ -50,6 +50,13 @@ from zope.schema import Choice
 from zope.schema import getFieldNamesInOrder
 from zope.schema import getFieldsInOrder
 
+try:
+    from collective.contentleadimage.config import IMAGE_FIELD_NAME
+    HAS_LEAD_IMAGE = True
+except ImportError:
+    IMAGE_FIELD_NAME = "image"
+    HAS_LEAD_IMAGE = False
+
 import logging
 import Missing
 
@@ -235,9 +242,11 @@ class PersistentCoverTile(tiles.PersistentTile, ESITile):
         if hasattr(obj, 'image'):  # Dexterity
             return True
         elif hasattr(obj, 'Schema'):  # Archetypes
-            return 'image' in obj.Schema().keys()
-        else:
-            return False
+            if 'image' in obj.Schema().keys():
+                return True
+            if HAS_LEAD_IMAGE and IMAGE_FIELD_NAME in obj.Schema().keys():
+                return True
+        return False
 
     def get_configured_fields(self):
         context = self.context

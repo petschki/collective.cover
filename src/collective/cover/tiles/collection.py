@@ -17,6 +17,11 @@ from zope.component import queryUtility
 from zope.interface import implements
 from zope.schema import getFieldsInOrder
 
+try:
+    from collective.contentleadimage.config import IMAGE_FIELD_NAME
+except ImportError:
+    IMAGE_FIELD_NAME = "image"
+
 
 class ICollectionTile(IPersistentCoverTile):
 
@@ -200,7 +205,7 @@ class CollectionTile(PersistentCoverTile):
                 else:
                     scale = scaleconf.split(' ')[0]
                 scales = item.restrictedTraverse('@@images')
-                return scales.scale('image', scale)
+                return scales.scale(IMAGE_FIELD_NAME, scale)
 
     @view.memoize
     def get_image_position(self):
