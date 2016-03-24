@@ -39,7 +39,7 @@ else:
             args.setdefault('pattern_options', {})
             merged = dict_merge(get_tinymce_options(context, self.field, self.request),  # noqa
                                 args['pattern_options'])
-            args['pattern_options'] = merged['pattern_options']
+            args['pattern_options'] = merged
 
             return args
 
